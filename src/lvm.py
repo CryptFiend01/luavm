@@ -1,6 +1,6 @@
 from lobject import *
 from luaconf import *
-from lcode import LuaCode
+from lopcode import LuaOpCode
 
 def isConst(c):
     return (c & 0x100) != 0
@@ -67,7 +67,7 @@ class LuaVm:
         pc, func, p = self.pc, self.func, self.p
         state = self.state
         c = p.GetCode(pc)
-        code = LuaCode(c)
+        code = LuaOpCode(c)
         printd("(" + str(pc) +")[Code:"+str(c)+"] op: " + str(code.GetOpCode()) + ", A: " + str(code.GetA()) + ", B: " + str(code.GetB()) + ", C: " + str(code.GetC()) + ", Bx: " + str(code.GetBx()) + ", sBx: " + str(code.GetsBx()))
         pc += 1
 
@@ -166,7 +166,7 @@ class LuaVm:
             sp = p.GetSubProto(code.GetBx())
             cl = LuaClosure(sp, func.Env())
             for i in range(sp.GetUpvalNum()):
-                nc = LuaCode(pc)
+                nc = LuaOpCode(pc)
                 if nc.GetOpCode() == OP_GETUPVAL:
                     cl.AddUpval(func.GetUpval(nc.GetB()))
                 elif nc.GetOpCode() == OP_MOVE:

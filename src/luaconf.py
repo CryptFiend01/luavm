@@ -70,6 +70,8 @@ OP_SETLIST = 34     ## SETLIST A B C; R(A)[(C-1)*FPF+i] := R(A+i), 1 <= i <= B
 
 OP_CLOSURE = 36     ## CLOSURE A Bx; R(A) := closure(KPROTO[Bx], R(A), ..., R(A+n))
 
+OP_VARARG = 37      ## VARARG A B; -- R(A), R(A+1), ..., R(A+B-1) = vararg
+
 OPNAME = [
     'MOVE',
     'LOADK',
@@ -115,3 +117,17 @@ FPF = 50 ## LFIELDS_PER_FLUSH number of list
 
 def isnumber(n):
     return isinstance(n, int) or isinstance(n, float)
+
+TK_NONE = 'TK_NONE'
+TK_EQ = 'TK_EQ'
+TK_COMMENT = 'TK_COMMENT'
+TK_NUMBER = 'TK_NUMBER'
+TK_STRING = 'TK_STRING'
+TK_NAME = 'TK_NAME'
+TK_NE = 'TK_NE'
+TK_LE = 'TK_LE'
+TK_GE = 'TK_GE'
+TK_CONCAT = 'TK_CONCAT'
+
+
+NO_JUMP = -1

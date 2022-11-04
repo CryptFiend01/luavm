@@ -167,6 +167,9 @@ class LuaProto:
     def PushSubProto(self, p):
         self.sub_protos.append(p)
 
+    def PushLine(self, line):
+        self.line_infos.append(line)
+
     def ShowCodes(self):
         print(self.codes)
 
@@ -241,7 +244,7 @@ class LuaTable:
         if not isinstance(key, Value):
             vkey = toValue(key)
             if vkey.IsNil():
-                return None
+                return
             self.kv[vkey] = val
         else:
             self.kv[key] = val
@@ -277,3 +280,14 @@ def toValue(val):
         v.SetTable(val)
     return v
 
+class FuncState:
+    def __init__(self) -> None:
+        self.proto = LuaProto()
+        self.pc = 0
+        self.stack = []
+
+    def open(self):
+        pass
+
+    def close(self):
+        pass

@@ -1,3 +1,5 @@
+from luaconf import *
+
 class Lex:
     def __init__(self, buf):
         self.buff = buf
@@ -10,6 +12,8 @@ class Lex:
                          'while', 'break', 'until', 'true', 'false',
                          'nil', 'not', 'or', 'and', 'repeat', 'in']
         self.error = ''
+        self.token = 'TK_NONE'
+        self.next = None
 
     def start(self):
         self.getC()
@@ -108,7 +112,30 @@ class Lex:
             c = self.getC()
         return float(s)
 
+    def getToken(self):
+        return self.token
+
     def nextToken(self):
+        if self.next != None:
+            self.token = self.next[0]
+            if self.token == TK_NUMBER:
+                self.num_val = self.next[1]
+            elif self.token == TK_NAME or self.token == TK_STRING:
+                self.str_val = self.next[1]
+            self.next = None
+        else:
+            self.token = self.__nextToken()
+        return self.token
+
+    def skipToken(self, t):
+        self.next = self.__nextToken()
+        if self.next[0] == t:
+            self.next = None
+            return True
+        else:
+            return False
+
+    def __nextToken(self):
         self.error = ''
         c = self.buff[self.current - 1]
         #print 'c=', ord(c), '|'
@@ -116,82 +143,81 @@ class Lex:
             if c == '\n':
                 self.line_no += 1
             elif c == '':
-                return 'TK_NONE'
+                return 'TK_NONE', None
             c = self.getC()
 
         if c == '=':
             c = self.getC()
             if c == '=':
                 self.getC()
-                return 'TK_EQ'
+                return 'TK_EQ', None
             else:
                 return '='
         elif c == '-':
             c = self.getC()
             if c == '-':
                 self.skipComment()
-                return 'TK_COMMENT'
+                return 'TK_COMMENT', None
             elif c.isdigit():
-                self.num_val = -self.loadNumber(c)
-                return 'TK_NUMBER'
+                num_val = -self.loadNumber(c)
+                return 'TK_NUMBER', num_val
             else:
-                return c
+                return c, None
         elif c == '[':
             c = self.getC()
             if c == '[':
-                self.str_val = self.loadString('[[')
-                return 'TK_STRING'
+                str_val = self.loadString('[[')
+                return 'TK_STRING', str_val
             else:
-                return '['
+                return '[', None
         elif c == '~':
             c = self.getC()
             if c == '=':
                 self.getC()
-                return 'TK_NE'
+                return 'TK_NE', None
             else:
                 self.error = 'Error ~, expect ~= at line ' + str(self.line_no)
-                return 'TK_NONE'
+                return 'TK_NONE', None
         elif c == '<':
             c = self.getC()
             if c == '=':
                 self.getC()
-                return 'TK_LE'
+                return 'TK_LE', None
             else:
-                return '<'
+                return '<', None
         elif c == '>':
             c = self.getC()
             if c == '=':
                 self.getC()
-                return 'TK_GE'
+                return 'TK_GE', None
             else:
-                return '>'
+                return '>', None
         elif c == '.':
             c = self.getC()
             if c == '.':
                 c = self.getC()
                 if c != '.':
-                    return 'TK_CONCAT'
+                    return 'TK_CONCAT', None
                 else:
                     self.getC()
-                    return '...'
+                    return '...', None
             else:
-                return c
+                return c, None
         elif c == '"' or c == "'":
-            self.str_val = self.loadString(c)
-            return 'TK_STRING'
+            str_val = self.loadString(c)
+            return 'TK_STRING', str_val
         elif c.isalpha() or c == '_':
-            self.str_val = self.loadName(c)
-            if self.str_val in self.reserves:
-                return self.str_val
+            str_val = self.loadName(c)
+            if str_val in self.reserves:
+                return self.str_val, None
             else:
-                return 'TK_NAME'
+                return 'TK_NAME', str_val
         elif c.isdigit():
-            self.num_val = self.loadNumber(c)
-            return 'TK_NUMBER'
+            num_val = self.loadNumber(c)
+            return 'TK_NUMBER', num_val
         else:
             self.getC()
-            return c
-        return 'TK_NONE'
+            return c, None
 
 def loadLua(fname):
     f = open(fname, 'rb')

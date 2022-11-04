@@ -1,39 +1,48 @@
-from luaconf import *
+from lex import Lex
+from lobject import *
+
+SIZE_C	= 9
+SIZE_B	= 9
+SIZE_Bx	= (SIZE_C + SIZE_B)
+SIZE_A	= 8
+SIZE_OP	= 6
+POS_OP = 0
+POS_A = (POS_OP + SIZE_OP)
+POS_C = (POS_A + SIZE_A)
+POS_B = (POS_C + SIZE_C)
+POS_Bx = POS_C
+
+def create_abc(o, a, b, c):
+    return ((int(o) << POS_OP) | (int(a) << POS_A) | (int(b) << POS_B) | (int(c) << POS_C))
+
+def create_abx(o, a, bc):
+    return ((int(o) << POS_OP) | (int(a) << POS_A) | (int(bc) << POS_Bx))
 
 class LuaCode:
-    def __init__(self, code):
-        self.code = code
+    def __init__(self, lex : Lex) -> None:
+        self.lex = lex
+        self.fnc = None
 
-    def GetOpCode(self):
-        return self.code & 0x3f
+    def setFunc(self, fnc: FuncState):
+        self.fnc = fnc
 
-    def GetA(self):
-        return (self.code >> 6) & 0xff
+    def code(self, c, line):
+        p = self.fnc.proto
+        # dischargejpc
+        p.PushCode(c)
+        p.PushLine(line)
 
-    def GetB(self):
-        return (self.code >> 23) & 0x1ff
+    def codeABC(self, opc, a, b, c):
+        self.code(create_abc(opc, a, b, c), self.lex.line_no)
 
-    def GetC(self):
-        return (self.code >> 14) & 0x1ff
+    def codeABx(self, opc, a, bc):
+        self.code(create_abx(opc, a, bc), self.lex.line_no)
 
-    def GetBx(self):
-        return (self.code >> 14) & 0x3ffff
+    def addK(self, k, v):
+        self.fnc.stack.append(k)
 
-    def GetsBx(self):
-        return self.GetBx() - 0x1ffff
+    def codeString(self, s):
+        return 0
 
-    def toString(self):
-        c = self.GetOpCode()
-        s = OPNAME[c] + ' ' + str(self.GetA())
-        if c in [OP_MOVE,OP_LOADNIL,OP_GETUPVAL,OP_SETUPVAL,OP_UMN,OP_NOT,OP_LEN]:
-            s += ' ' + str(self.GetB())
-        elif c in [OP_LOADK, OP_GETGLOBAL, OP_SETGLOBAL, OP_CLOSURE]:
-            s += ' ' + str(self.GetBx())
-        elif c in [OP_FORLOOP, OP_FORPREP]:
-            s += ' ' + str(self.GetsBx())
-        elif c in [OP_TFORLOOP, OP_TEST]:
-            s += ' ' + str(self.GetC())
-        #elif c == OP_CLOSE: pass
-        else:
-            s += ' ' + str(self.GetB()) + ' ' + str(self.GetC())
-        return s
+    def codeNum(self, n):
+        return 0
