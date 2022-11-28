@@ -257,7 +257,7 @@ class LuaTable:
         return n
 
 class LocalVar:
-    def __init__(self):
+    def __init__(self, name, start, end):
         self.name = ""
         self.startpc = 0
         self.endpc = 0
@@ -285,6 +285,7 @@ class FuncState:
         self.proto = LuaProto()
         self.pc = 0
         self.stack = []
+        self.upvalues = []
 
     def open(self):
         pass

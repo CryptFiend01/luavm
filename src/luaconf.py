@@ -129,5 +129,17 @@ TK_LE = 'TK_LE'
 TK_GE = 'TK_GE'
 TK_CONCAT = 'TK_CONCAT'
 
+SIZE_C	= 9
+SIZE_B	= 9
+SIZE_Bx	= (SIZE_C + SIZE_B)
+SIZE_A	= 8
+SIZE_OP	= 6
+POS_OP = 0
+POS_A = (POS_OP + SIZE_OP)
+POS_C = (POS_A + SIZE_A)
+POS_B = (POS_C + SIZE_C)
+POS_Bx = POS_C
 
 NO_JUMP = -1
+
+NO_REG = (1 << SIZE_A) - 1

@@ -1,16 +1,7 @@
 from lex import Lex
 from lobject import *
-
-SIZE_C	= 9
-SIZE_B	= 9
-SIZE_Bx	= (SIZE_C + SIZE_B)
-SIZE_A	= 8
-SIZE_OP	= 6
-POS_OP = 0
-POS_A = (POS_OP + SIZE_OP)
-POS_C = (POS_A + SIZE_A)
-POS_B = (POS_C + SIZE_C)
-POS_Bx = POS_C
+from luaconf import *
+from lexp import *
 
 def create_abc(o, a, b, c):
     return ((int(o) << POS_OP) | (int(a) << POS_A) | (int(b) << POS_B) | (int(c) << POS_C))
@@ -46,3 +37,25 @@ class LuaCode:
 
     def codeNum(self, n):
         return 0
+
+    def setoneret(self, v: Expdesc):
+        if v.expkind == Expdesc.VCALL:
+            v.expkind = Expdesc.VNONRELOC
+            v.info = 0
+        elif v.expkind == Expdesc.VVARARG:
+            v.expkind = Expdesc.VRELOCABLE
+
+    def dischargeVars(self, v: Expdesc):
+        if v.expkind == Expdesc.VLOCAL:
+            v.expkind = Expdesc.VNONRELOC
+        elif v.expkind == Expdesc.VUPVAL:
+            v.info = self.codeABC(OP_GETUPVAL, 0, v.info, 0)
+            v.expkind = Expdesc.VRELOCABLE
+        elif v.expkind == Expdesc.VGLOBAL:
+            v.info = self.codeABx(OP_GETGLOBAL, 0, v.info)
+            v.expkind = Expdesc.VRELOCABLE
+        elif v.expkind == Expdesc.VINDEXED:
+            v.info = self.codeABC(OP_GETTABLE, 0, v.info, v.aux)
+            v.expkind = Expdesc.VRELOCABLE
+        elif v.expkind == Expdesc.VVARARG or v.expkind == Expdesc.VCALL:
+            self.setoneret(v)

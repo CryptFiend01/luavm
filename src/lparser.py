@@ -2,6 +2,7 @@ from lex import Lex
 from lobject import LuaProto, FuncState
 from luaconf import *
 from lexp import *
+import os
 
 PRIORITY = [[6,6], [6,6], [7,7], [7,7], [7,7],
             [10,9], [5,4],
@@ -20,6 +21,10 @@ class Parser:
         self.code = LuaCode()
         self.fnc = None
         self.fncStack = []
+
+    def symbolError(self, err):
+        print("[line %d token %s]: " % (self.lex.line_no, self.token) + err)
+        os.abort()
     
     def parse(self):
         # 1. 每一个函数开头自己获取当前处理所需要的token
@@ -42,7 +47,7 @@ class Parser:
             is_over = self.statement()
             self.lex.skipToken(';')
 
-    def body(self):
+    def body(self, v: Expdesc):
         pass
 
     def openfunc(self):
@@ -80,11 +85,78 @@ class Parser:
         else:
             self.exprstat()
 
-    def constructor(self):
+    def constructor(self, v: Expdesc):
         pass
 
-    def primaryexp(self):
+    def markupval(self, v: Expdesc):
         pass
+
+    def indexupvalue(self, fs: FuncState, v: Expdesc):
+        p = fs.proto
+        def setExp(v, i):
+            v.info = i
+            v.expkind = Expdesc.VUPVAL
+        vname = self.lex.getStr()
+        for i in range(len(p.upval_names)):
+            if p.upval_names[i] == vname:
+                setExp(v, i)
+                return
+        p.upval_names.append(vname)
+
+    def searchvar(self, fs: FuncState, vname):
+        p = fs.proto
+        for i in range(p.local_vars):
+            if p.local_vars[i].name == vname:
+                return i
+        return -1
+
+    def singlevaraux(self, fn, v: Expdesc):
+        if fn > len(self.fncStack):
+            v.setglobal(self.lex.getStr())
+        else:
+            if fn == 0:
+                fs = self.fnc
+            else:
+                fs = self.fncStack[len(self.fncStack)-fn]
+            vn = self.searchvar(fs, self.lex.getStr())
+            if vn >= 0:
+                v.setlocal(vn)
+                if fn == 0:
+                    self.markupval(v)
+            else:
+                fn2 = fn + 1
+                if fn2 > len(self.fncStack):
+                    self.singlevaraux(fn2, v)
+                else:
+                    self.indexupvalue(fs, v)
+
+    def singlevar(self, v: Expdesc):
+        self.singlevaraux(0, v)
+
+    def prefixexp(self, v: Expdesc):
+        if self.token == '(':
+            self.expr(v)
+            if self.lex.nextToken() != ')':
+                self.symbolError("( is not match.")
+            self.code.dischargeVars(v)
+        elif self.token == TK_NAME:
+            self.singlevar(v)
+        else:
+            self.symbolError("unexpected symbol")
+
+    def primaryexp(self, v: Expdesc):
+        self.prefixexp(v)
+        while True:
+            if self.token == '.':
+                pass
+            elif self.token == '[':
+                pass
+            elif self.token == ':':
+                pass
+            elif self.token in ['(', TK_STRING, '{']:
+                pass
+            else:
+                return
 
     def _simpleexp(self, v: Expdesc):
         if self.token == TK_NUMBER:
@@ -100,28 +172,40 @@ class Parser:
         elif self.token == '...':
             v.setdots()
         elif self.token == '{':
-            self.constructor()
+            self.constructor(v)
         elif self.token == 'function':
-            self.body()
+            self.body(v)
         else:
-            self.primaryexp()
+            self.primaryexp(v)
+        return v
 
-    def subexpr(self, v, priot):
+    def subexpr(self, v: Expdesc, priot):
         self.token = self.lex.nextToken()
         if self.token not in self.unoprs:
             self.subexpr(v, UNARY_PRIORITY)
         else:
-            self._simpleexp()
+            self._simpleexp(v)
         
         self.token = self.lex.nextToken()
 
-    def expr(self):
-        v = Expdesc(self.code)
+        def getBinOp():
+            if self.token not in self.binoprs:
+                return -1
+            return self.binoprs.index(self.token)
+        
+        op = getBinOp()
+        while op != -1 and PRIORITY[op][0] > priot:
+            v2 = Expdesc(self.code)
+            nextop = self.subexpr(v2, PRIORITY[op][1])
+            op = nextop
+        return op
+
+    def expr(self, v: Expdesc):
         self.subexpr(v, 0)
-        return v
 
     def cond(self):
-        v = self.expr()
+        v = Expdesc(self.code)
+        self.expr(v)
 
     def test_then_block(self):
         condexit = self.cond()

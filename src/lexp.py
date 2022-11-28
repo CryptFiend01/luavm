@@ -50,3 +50,10 @@ class Expdesc:
 
     def setdots(self):
         self.init(Expdesc.VVARARG, self.code.codeABC(OP_VARARG, 0, 1, 0))
+
+    def setglobal(self, vname):
+        self.init(Expdesc.VGLOBAL, self.code.codeString(vname))
+        
+    def setlocal(self, vn):
+        self.init(Expdesc.VLOCAL, vn)
+        
